@@ -133,7 +133,6 @@ if TRANSPORT_ROUTES: logging.info(f"🚦 Loaded {len(TRANSPORT_ROUTES)} transpor
 
 API_PASSWORD = os.environ.get("API_PASSWORD")
 PORT = int(os.environ.get("PORT", 7860))
-CF_WORKER_URL = os.environ.get("CF_WORKER_URL", "").strip()
 
 # --- Recording/DVR Configuration ---
 DVR_ENABLED = os.environ.get("DVR_ENABLED", "false").lower() in ("true", "1", "yes")

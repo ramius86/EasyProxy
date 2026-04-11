@@ -34,7 +34,6 @@ from config import (
     API_PASSWORD,
     check_password,
     MPD_MODE,
-    CF_WORKER_URL,
 )
 from extractors.generic import GenericHLSExtractor, ExtractorError
 from services.manifest_rewriter import ManifestRewriter
@@ -604,7 +603,6 @@ class HLSProxy:
                         self.extractors[key] = DoodStreamExtractor(
                             request_headers,
                             proxies=GLOBAL_PROXIES,
-                            worker_url=CF_WORKER_URL,
                         )
                     return self.extractors[key]
                 elif host == "fastream":
@@ -829,7 +827,6 @@ class HLSProxy:
                     self.extractors[key] = DoodStreamExtractor(
                         request_headers,
                         proxies=proxy_list,
-                        worker_url=CF_WORKER_URL,
                     )
                 return self.extractors[key]
             elif "fastream" in url:

@@ -244,7 +244,6 @@ RECORDINGS_RETENTION_DAYS=7
 Supported variables:
 - `GLOBAL_PROXY`: Fallback proxy for all requests.
 - `TRANSPORT_ROUTES`: Advanced system for proxy routing based on URL patterns.
-- `CF_WORKER_URL`: Optional Cloudflare Worker URL used only for DoodStream page/pass-through fetches.
 - `PORT`: Port the server listens on (default: 7860).
 - `API_PASSWORD`: Password to protect API access.
 - `MPD_MODE`: MPD processing mode (`ffmpeg` or `legacy`). Default: `legacy`.
@@ -260,23 +259,6 @@ Supported variables:
 # Change the server port (default: 7860)
 PORT=8080
 ```
-
-**Example for DoodStream through Cloudflare Worker:**
-
-```env
-CF_WORKER_URL=https://your-worker.your-subdomain.workers.dev/
-```
-
-To use it, just create a Cloudflare Worker and paste into it the content of [cf_worker_proxy.js](cf_worker_proxy.js).
-
-You can set it either as:
-- `https://your-worker.workers.dev`
-- `https://your-worker.workers.dev/`
-
-Expected worker behavior:
-- receive the upstream DoodStream URL in `url`
-- fetch that URL server-side
-- return the original upstream body/headers to EasyProxy
 
 ---
 
