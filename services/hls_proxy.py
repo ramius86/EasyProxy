@@ -89,6 +89,7 @@ if MPD_MODE == "legacy":
     LiveTVExtractor,
     F16PxExtractor,
 ) = None, None, None, None, None
+StreamHGExtractor = None
 
 logger = logging.getLogger(__name__)
 
@@ -243,6 +244,13 @@ try:
     logger.info("✅ StreamWishExtractor module loaded.")
 except ImportError:
     logger.warning("⚠️ StreamWishExtractor module not found.")
+
+try:
+    from extractors.streamhg import StreamHGExtractor
+
+    logger.info("✅ StreamHGExtractor module loaded.")
+except ImportError:
+    logger.warning("⚠️ StreamHGExtractor module not found.")
 
 try:
     from extractors.supervideo import SupervideoExtractor
@@ -640,6 +648,12 @@ class HLSProxy:
                             request_headers, proxies=GLOBAL_PROXIES
                         )
                     return self.extractors[key]
+                elif host == "streamhg":
+                    if key not in self.extractors:
+                        self.extractors[key] = StreamHGExtractor(
+                            request_headers, proxies=GLOBAL_PROXIES
+                        )
+                    return self.extractors[key]
                 elif host == "supervideo":
                     if key not in self.extractors:
                         self.extractors[key] = SupervideoExtractor(
@@ -729,6 +743,26 @@ class HLSProxy:
                 proxy_list = [proxy] if proxy else []
                 if key not in self.extractors:
                     self.extractors[key] = SportsonlineExtractor(
+                        request_headers, proxies=proxy_list
+                    )
+                return self.extractors[key]
+            elif (
+                re.search(r"/e/[^/?#]+", url, re.IGNORECASE) is not None
+                and any(
+                    d in url.lower()
+                    for d in [
+                        "dhcplay.com/",
+                        "vibuxer.com/",
+                        "streamhg.com/",
+                        "masukestin.com/",
+                    ]
+                )
+            ):
+                key = "streamhg"
+                proxy = get_proxy_for_url("streamhg", TRANSPORT_ROUTES, GLOBAL_PROXIES)
+                proxy_list = [proxy] if proxy else []
+                if key not in self.extractors:
+                    self.extractors[key] = StreamHGExtractor(
                         request_headers, proxies=proxy_list
                     )
                 return self.extractors[key]
@@ -1528,6 +1562,7 @@ class HLSProxy:
                         "maxstream",
                         "okru",
                         "streamwish",
+                        "streamhg",
                         "supervideo",
                         "dropload",
                         "uqload",
