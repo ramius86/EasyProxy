@@ -40,7 +40,18 @@ class MaxstreamExtractor:
     def __init__(self, request_headers: dict, proxies: list = None):
         self.request_headers = request_headers
         self.base_headers = {
-            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+            "accept-language": "en-US,en;q=0.9",
+            "accept-encoding": "gzip, deflate, br",
+            "sec-ch-ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": '"Windows"',
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "none",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1",
         }
         self.session = None
         self.mediaflow_endpoint = "hls_proxy"
@@ -58,7 +69,7 @@ class MaxstreamExtractor:
         timeout = ClientTimeout(total=45, connect=15, sock_read=30)
         if proxy:
             connector = ProxyConnector.from_url(proxy)
-            return ClientSession(timeout=timeout, connector=connector, headers={'User-Agent': self.base_headers["user-agent"]})
+            return ClientSession(timeout=timeout, connector=connector, headers=self.base_headers)
         
         if self.session is None or self.session.closed:
             connector = TCPConnector(
@@ -68,7 +79,7 @@ class MaxstreamExtractor:
                 enable_cleanup_closed=True, 
                 resolver=self.resolver # Use custom StaticResolver
             )
-            self.session = ClientSession(timeout=timeout, connector=connector, headers={'User-Agent': self.base_headers["user-agent"]})
+            self.session = ClientSession(timeout=timeout, connector=connector, headers=self.base_headers)
         return self.session
 
     async def _resolve_doh(self, domain: str) -> list[str]:
