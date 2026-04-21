@@ -364,6 +364,18 @@ class HLSProxy:
         # Version information
         self.latest_version = "Checking..."
 
+    @staticmethod
+    def _debug_header_snapshot(headers: dict) -> str:
+        if not headers:
+            return "keys=[] referer=- origin=- cookie_count=0 ua=0"
+        cookie_value = headers.get("Cookie") or headers.get("cookie") or ""
+        cookie_count = len([part for part in cookie_value.split(";") if part.strip()]) if cookie_value else 0
+        referer_value = headers.get("Referer") or headers.get("referer") or "-"
+        origin_value = headers.get("Origin") or headers.get("origin") or "-"
+        ua_present = "1" if (headers.get("User-Agent") or headers.get("user-agent")) else "0"
+        keys = ",".join(sorted(headers.keys()))
+        return f"keys=[{keys}] referer={referer_value} origin={origin_value} cookie_count={cookie_count} ua={ua_present}"
+
     async def shorten_hls_url(self, url: str) -> str:
         """Crea un ID breve per un URL e lo memorizza nella mappa."""
         if not url:
@@ -1264,6 +1276,11 @@ class HLSProxy:
             if hls_sid and hls_sid in self.hls_header_sessions:
                 logger.info(f"📁 Using HLS header session: {hls_sid}")
                 combined_headers.update(self.hls_header_sessions[hls_sid])
+                logger.info(
+                    "🧪 [hls sid debug] phase=load sid=%s %s",
+                    hls_sid,
+                    self._debug_header_snapshot(self.hls_header_sessions[hls_sid]),
+                )
 
             # 1. Header passati come h_X=Y
             for param_name, param_value in request.query.items():
@@ -1375,6 +1392,11 @@ class HLSProxy:
                     current_hls_sid = f"sid_{int(time.time())}_{random.getrandbits(16)}"
                     self.hls_header_sessions[current_hls_sid] = stream_headers
                     logger.info(f"🆕 Created HLS header session: {current_hls_sid}")
+                    logger.info(
+                        "🧪 [hls sid debug] phase=create-manifest sid=%s %s",
+                        current_hls_sid,
+                        self._debug_header_snapshot(stream_headers),
+                    )
 
                 rewritten_manifest = await ManifestRewriter.rewrite_manifest_urls(
                     manifest_content=captured_manifest,
@@ -1873,6 +1895,11 @@ class HLSProxy:
                 hls_sid = f"sid_{int(time.time())}_{random.getrandbits(16)}"
                 self.hls_header_sessions[hls_sid] = stream_headers
                 logger.info(f"🆕 Created HLS header session in extractor: {hls_sid}")
+                logger.info(
+                    "🧪 [hls sid debug] phase=create-extractor sid=%s %s",
+                    hls_sid,
+                    self._debug_header_snapshot(stream_headers),
+                )
                 header_params = f"&hls_sid={hls_sid}"
             else:
                 header_params = "".join(
@@ -2680,6 +2707,11 @@ class HLSProxy:
                         current_hls_sid = f"sid_{int(time.time())}_{random.getrandbits(16)}"
                         self.hls_header_sessions[current_hls_sid] = headers
                         logger.info(f"🆕 Created HLS header session in proxy: {current_hls_sid}")
+                        logger.info(
+                            "🧪 [hls sid debug] phase=create-proxy sid=%s %s",
+                            current_hls_sid,
+                            self._debug_header_snapshot(headers),
+                        )
 
                     rewritten = await ManifestRewriter.rewrite_manifest_urls(
                         manifest_content=manifest_content,
