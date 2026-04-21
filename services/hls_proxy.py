@@ -2290,13 +2290,10 @@ class HLSProxy:
             # ✅ Use yarl.URL with encoded=True to prevent double-encoding of commas
             final_segment_url = yarl.URL(segment_url, encoded=True)
             async with session.get(final_segment_url, headers=headers) as resp:
-                content_bytes = await resp.read()
-                content_bytes = self._strip_fake_png_header_from_ts(content_bytes)
                 response_headers = {}
 
                 for header in [
                     "content-type",
-                    "content-length",
                     "content-range",
                     "accept-ranges",
                     "last-modified",
@@ -2326,15 +2323,22 @@ class HLSProxy:
                     "Range, Content-Type",
                 )
 
-                set_response_header(
-                    response_headers, "Content-Length", str(len(content_bytes))
-                )
+                response = web.StreamResponse(status=resp.status, headers=response_headers)
+                await response.prepare(request)
 
-                return web.Response(
-                    body=content_bytes,
-                    status=resp.status,
-                    headers=response_headers,
-                )
+                first_chunk = True
+                try:
+                    async for chunk in resp.content.iter_any():
+                        if first_chunk:
+                            chunk = self._strip_fake_png_header_from_ts(chunk)
+                            first_chunk = False
+                        await response.write(chunk)
+                    await response.write_eof()
+                    return response
+                except Exception as e:
+                    if "Connection lost" not in str(e) and "closing transport" not in str(e):
+                        logger.error(f"Error streaming segment {segment_name}: {str(e)}")
+                    return response
 
         except Exception as e:
             logger.error(f"Error in segment proxy: {str(e)}")
