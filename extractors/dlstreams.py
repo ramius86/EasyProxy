@@ -611,59 +611,28 @@ class DLStreamsExtractor:
                     self._refresh_tasks[channel_key] = asyncio.create_task(do_refresh())
 
             # 3. FETCH ACTUAL MANIFEST
-            server_key = await self._lookup_server_key(lookup_base, channel_key, iframe_origin)
-            candidate_urls = [
-                f"{lookup_base}/proxy/{server_key}/{channel_key}/mono.css",
-                f"{lookup_base}/proxy/wind/{channel_key}/mono.css",
-                f"{lookup_base}/proxy/top1/cdn/{channel_key}/mono.css",
-            ]
-            seen = set()
-            candidate_urls = [u for u in candidate_urls if not (u in seen or seen.add(u))]
-            
-            playback_headers = {
-                "Referer": f"{iframe_origin}/",
-                "Origin": iframe_origin,
-                "User-Agent": self.base_headers["User-Agent"],
-                "Accept": "*/*",
-                "Sec-Fetch-Dest": "empty",
-                "Sec-Fetch-Mode": "cors",
-                "Sec-Fetch-Site": "cross-site",
-            }
-            
-            # Prime cookies
-            if self._captured_cookies:
-                yarl_url = URL(candidate_urls[0])
-                for c in self._captured_cookies:
-                    session.cookie_jar.update_cookies({c['name']: c['value']}, response_url=yarl_url)
-            
+            # Skip the direct fetch attempt as it rarely works for DLStreams due to aggressive key rotation.
+            # We go straight to browser capture if not in micro-cache.
             captured_manifest = None
             captured_stream_url = None
-            m3u8_url = candidate_urls[0]
+            m3u8_url = None
 
-            for candidate in candidate_urls:
-                captured_manifest = await self._fetch_manifest_directly(candidate, playback_headers)
-                if captured_manifest:
-                    m3u8_url = candidate
-                    captured_stream_url = candidate
+            logger.info("DLStreams: Refreshing session via browser...")
+            player_urls = self._prioritize_player_urls(channel_id)
+            for candidate in player_urls:
+                await self._prime_dlstreams_session(session, candidate)
+                # Pass the original URL as referer to avoid "Direct access blocked"
+                captured_manifest, browser_stream_url = await self._capture_browser_session_state(channel_id, candidate, referer=url)
+                if captured_manifest or browser_stream_url:
+                    if browser_stream_url:
+                        captured_stream_url = browser_stream_url
+                        m3u8_url = browser_stream_url
+                        lookup_base = self._origin_of(browser_stream_url).rstrip("/")
+                    else:
+                        lookup_base = self.stream_origin.rstrip("/")
+                        server_key = await self._lookup_server_key(lookup_base, channel_key, iframe_origin)
+                        m3u8_url = f"{lookup_base}/proxy/{server_key}/{channel_key}/mono.css"
                     break
-            
-            if not captured_manifest:
-                logger.info("DLStreams direct fetch failed or session expired. Refreshing via browser...")
-                player_urls = self._prioritize_player_urls(channel_id)
-                for candidate in player_urls:
-                    await self._prime_dlstreams_session(session, candidate)
-                    # Pass the original URL as referer to avoid "Direct access blocked"
-                    captured_manifest, browser_stream_url = await self._capture_browser_session_state(channel_id, candidate, referer=url)
-                    if captured_manifest or browser_stream_url:
-                        if browser_stream_url:
-                            captured_stream_url = browser_stream_url
-                            m3u8_url = browser_stream_url
-                            lookup_base = self._origin_of(browser_stream_url).rstrip("/")
-                        else:
-                            lookup_base = self.stream_origin.rstrip("/")
-                            server_key = await self._lookup_server_key(lookup_base, channel_key, iframe_origin)
-                            m3u8_url = f"{lookup_base}/proxy/{server_key}/{channel_key}/mono.css"
-                        break
             
             if not captured_manifest and not captured_stream_url:
                 self._mark_browser_failure(channel_key)
