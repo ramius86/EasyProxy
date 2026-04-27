@@ -467,11 +467,7 @@ def extract_unpack(packed_js):
     Unpacker for P.A.C.K.E.R. packed javascript.
     """
     try:
-        match = re.search(r"}\((.*)\)\)", packed_js)
-        if not match:
-            raise ValueError("Cannot find packed data.")
-
-        p, a, c, k, e, d = eval(f"({match.group(1)})", {"__builtins__": {}}, {})
-        return unpack(p, a, c, k, e, d)
+        from utils.packed import unpack as packed_unpack
+        return packed_unpack(packed_js)
     except Exception as e:
         raise ValueError(f"Failed to unpack JS: {e}")

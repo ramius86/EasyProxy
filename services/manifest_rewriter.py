@@ -1,7 +1,7 @@
 import logging
 import re
 import urllib.parse
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)

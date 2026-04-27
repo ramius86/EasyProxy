@@ -1,4 +1,4 @@
-import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as ET
 import urllib.parse
 from urllib.parse import urljoin
 import logging

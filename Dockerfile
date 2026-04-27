@@ -75,5 +75,12 @@ LABEL org.opencontainers.image.title="EasyProxy Monolith"
 LABEL org.opencontainers.image.description="All-in-one HLS Proxy with integrated FlareSolverr v3"
 EXPOSE 7860 8191
 
+RUN groupadd -r proxyuser && useradd -r -m -g proxyuser -G root -u 1000 proxyuser \
+    && chown -R proxyuser:proxyuser /app \
+    && chown -R proxyuser:proxyuser /var/log \
+    && chown proxyuser:proxyuser /usr/bin/chromedriver
+
+USER 1000:1000
+
 # 8. Execution
 ENTRYPOINT ["/bin/bash", "/app/entrypoint.sh"]

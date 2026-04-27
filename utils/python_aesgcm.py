@@ -113,11 +113,11 @@ class AESGCM:
         s = _ghash(self.h_int, aad, ciphertext)
         j0_encrypted = _aes_block_encrypt(self.key, j0)
         expected_tag = _xor_bytes(_int_to_bytes(s, 16), j0_encrypted)
-        
-        # Verify tag (constant-time comparison would be better for security)
-        if tag != expected_tag:
-            return None
-        
+
+        import hmac
+        # Verify tag (constant-time comparison)
+        if not hmac.compare_digest(tag, expected_tag):
+            return None        
         return bytes(plaintext)
 
 
