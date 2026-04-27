@@ -4,6 +4,7 @@ import os
 from aiohttp import web
 
 from config import check_password
+from utils.security import get_base_url
 
 logger = logging.getLogger(__name__)
 
@@ -407,9 +408,8 @@ def setup_recording_routes(app, recording_manager):
             return web.json_response({"error": "Recording file not available yet"}, status=404)
 
         # Redirect to the stream endpoint (absolute URL for Stremio)
-        scheme = request.headers.get('X-Forwarded-Proto', request.scheme)
-        host = request.headers.get('X-Forwarded-Host', request.host)
-        base_url = f"{scheme}://{host}"
+        from utils.security import get_base_url
+        base_url = get_base_url(request)
 
         api_password = request.query.get('api_password', '')
         stream_url = f"{base_url}/api/recordings/{recording_id}/stream"

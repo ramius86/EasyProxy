@@ -4,9 +4,11 @@ import random
 import re
 import sys
 import os
+import subprocess
 import time
 import socket
 import urllib.parse
+import html
 from urllib.parse import urlparse, urljoin
 import base64
 import binascii
@@ -16,6 +18,7 @@ import json
 import ssl
 import yarl
 import aiohttp
+from utils.security import is_safe_url, get_base_url
 from aiohttp import (
     web,
     ClientSession,
@@ -329,6 +332,7 @@ class HLSProxy:
     def __init__(self, ffmpeg_manager=None):
         self.extractors = {}
         self.ffmpeg_manager = ffmpeg_manager
+        self._prefetch_semaphore = asyncio.Semaphore(3)
 
         # Inizializza il playlist_builder se il modulo è disponibile
         if PlaylistBuilder:
@@ -565,6 +569,9 @@ class HLSProxy:
 
     async def _get_session(self, prefer_default_family: bool = False, url: str = None):
         if url:
+            if not await is_safe_url(url):
+                logger.error(f"Blocked unsafe SSRF request to {url} in _get_session")
+                raise ValueError(f"Unsafe URL requested: {url}")
             self._check_dynamic_warp_bypass(url)
         target_attr = "flex_session" if prefer_default_family else "session"
         session = getattr(self, target_attr)
@@ -611,8 +618,8 @@ class HLSProxy:
                     base_domain = ".".join(domain.split(".")[-2:])
                     logging.info(f"⚡ [Dynamic Bypass] Adding {base_domain} (and {domain}) to WARP exclusion list...")
                     
-                    os.system(f"warp-cli --accept-tos tunnel host add {base_domain} > /dev/null 2>&1")
-                    os.system(f"warp-cli --accept-tos tunnel host add {domain} > /dev/null 2>&1")
+                    subprocess.run(["warp-cli", "--accept-tos", "tunnel", "host", "add", base_domain], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(["warp-cli", "--accept-tos", "tunnel", "host", "add", domain], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     
                     # In Proxy mode, we must also update the local exclusion list
                     if base_domain not in WARP_EXCLUDE_DOMAINS:
@@ -635,6 +642,10 @@ class HLSProxy:
         - session: The aiohttp ClientSession to use
         - proxy_url: The proxy URL being used, or None for direct connection
         """
+        if not await is_safe_url(url):
+            logger.error(f"Blocked unsafe SSRF request to {url}")
+            raise ValueError(f"Unsafe URL requested: {url}")
+            
         # Trigger dynamic bypass check before getting proxy settings
         self._check_dynamic_warp_bypass(url, force=bypass_warp)
         
@@ -1437,9 +1448,7 @@ class HLSProxy:
             # Se redirect_stream è False, restituisci il JSON con i dettagli (stile MediaFlow)
             if not redirect_stream:
                 # Costruisci l'URL base del proxy
-                scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-                host = request.headers.get("X-Forwarded-Host", request.host)
-                proxy_base = f"{scheme}://{host}"
+                proxy_base = get_base_url(request)
 
                 mediaflow_endpoint = (
                     result.get("mediaflow_endpoint", "hls_proxy")
@@ -1475,9 +1484,7 @@ class HLSProxy:
                 return web.json_response(response_data)
 
             if captured_manifest and request.path.endswith("manifest.m3u8"):
-                scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-                host = request.headers.get("X-Forwarded-Host", request.host)
-                proxy_base = f"{scheme}://{host}"
+                proxy_base = get_base_url(request)
                 original_channel_url = request.query.get("url") or request.query.get("d", "")
                 api_password = request.query.get("api_password")
                 no_bypass = request.query.get("no_bypass") == "1"
@@ -1599,13 +1606,7 @@ class HLSProxy:
 
                     if playlist_rel_path:
                         # Construct local URL for the FFmpeg stream
-                        scheme = request.headers.get(
-                            "X-Forwarded-Proto", request.scheme
-                        )
-                        host = request.headers.get("X-Forwarded-Host", request.host)
-                        local_url = (
-                            f"{scheme}://{host}/ffmpeg_stream/{playlist_rel_path}"
-                        )
+                        local_url = f"{get_base_url(request)}/ffmpeg_stream/{playlist_rel_path}"
 
                         # Generate Master Playlist for compatibility
                         master_playlist = (
@@ -1751,11 +1752,7 @@ class HLSProxy:
                          return web.Response(text="Failed to fetch MPD manifest after all attempts", status=502)
 
                     # Build proxy base URL
-                    scheme = request.headers.get(
-                        "X-Forwarded-Proto", request.scheme
-                    )
-                    host = request.headers.get("X-Forwarded-Host", request.host)
-                    proxy_base = f"{scheme}://{host}"
+                    proxy_base = get_base_url(request)
 
                     # Build params string with headers
                     params = "".join(
@@ -1983,6 +1980,10 @@ class HLSProxy:
                 url = urllib.parse.unquote(url)
             except:
                 pass
+                
+            if not await is_safe_url(url):
+                logger.error(f"Blocked unsafe SSRF request to {url} in handle_extractor_request")
+                return web.Response(status=403, text="Unsafe URL requested")
 
             # 2. Base64 Decoding (Try)
             try:
@@ -2046,9 +2047,7 @@ class HLSProxy:
             )
 
             # Costruisci l'URL del proxy per questo stream
-            scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-            host = request.headers.get("X-Forwarded-Host", request.host)
-            proxy_base = f"{scheme}://{host}"
+            proxy_base = get_base_url(request)
 
             # Determina l'endpoint corretto
             endpoint = "/proxy/hls/manifest.m3u8"
@@ -2978,9 +2977,7 @@ class HLSProxy:
 
                 if manifest_content:
                     logger.info(f"📄 HLS manifest detected: {stream_url}")
-                    scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-                    host = request.headers.get("X-Forwarded-Host", request.host)
-                    proxy_base = f"{scheme}://{host}"
+                    proxy_base = get_base_url(request)
                     original_url = request.query.get("url") or request.query.get("d", "")
                     use_short_hls_urls = (
                         "cinemacity.cc" in (original_url or "").lower()
@@ -3014,9 +3011,7 @@ class HLSProxy:
                     manifest_content = content_bytes.decode("utf-8", errors='replace')
 
                     # ✅ CORREZIONE: Rileva lo schema e l'host corretti quando dietro un reverse proxy
-                    scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-                    host = request.headers.get("X-Forwarded-Host", request.host)
-                    proxy_base = f"{scheme}://{host}"
+                    proxy_base = get_base_url(request)
 
                     # Recupera parametri
                     clearkey_param = request.query.get("clearkey")
@@ -3249,9 +3244,7 @@ class HLSProxy:
                 )
 
             # ✅ CORREZIONE: Rileva lo schema e l'host corretti quando dietro un reverse proxy
-            scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-            host = request.headers.get("X-Forwarded-Host", request.host)
-            base_url = f"{scheme}://{host}"
+            base_url = get_base_url(request)
 
             # ✅ FIX: Passa api_password al builder se presente
             api_password = request.query.get("api_password")
@@ -3308,7 +3301,7 @@ class HLSProxy:
 
             html_content = html_content.replace("{{VERSION_MODE}}", VERSION_MODE)
             html_content = html_content.replace("{{APP_VERSION}}", APP_VERSION)
-            html_content = html_content.replace("{{LATEST_VERSION}}", self.latest_version)
+            html_content = html_content.replace("{{LATEST_VERSION}}", html.escape(self.latest_version))
             html_content = html_content.replace("{{VERSION_STATUS_CLASS}}", version_status_class)
             html_content = html_content.replace("{{WARP_STATUS}}", self.warp_status)
             return web.Response(text=html_content, content_type="text/html")
@@ -3386,7 +3379,7 @@ class HLSProxy:
 
             html_content = html_content.replace("{{VERSION_MODE}}", VERSION_MODE)
             html_content = html_content.replace("{{APP_VERSION}}", APP_VERSION)
-            html_content = html_content.replace("{{LATEST_VERSION}}", self.latest_version)
+            html_content = html_content.replace("{{LATEST_VERSION}}", html.escape(self.latest_version))
             html_content = html_content.replace("{{VERSION_STATUS_CLASS}}", version_status_class)
             html_content = html_content.replace("{{WARP_STATUS}}", self.warp_status)
             return web.Response(text=html_content, content_type="text/html")
@@ -3751,6 +3744,8 @@ class HLSProxy:
         self, url, init_url, key, key_id, headers, cache_key, bypass_warp: bool = False
     ):
         """Scarica, decripta e mette in cache un segmento in background."""
+        async with self._prefetch_semaphore:
+            pass
         try:
             if decrypt_segment is None:
                 return
@@ -4078,9 +4073,7 @@ class HLSProxy:
             generated_urls = []
 
             # Determina base URL del proxy
-            scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-            host = request.headers.get("X-Forwarded-Host", request.host)
-            proxy_base = f"{scheme}://{host}"
+            proxy_base = get_base_url(request)
 
             for item in urls_to_process:
                 dest_url = item.get("destination_url")

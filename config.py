@@ -4,6 +4,8 @@ import random
 import socket
 import time
 import contextvars
+import secrets
+import hmac
 from dotenv import load_dotenv
 
 # ContextVar for thread-safe/async-safe warp bypass state
@@ -290,6 +292,9 @@ if TRANSPORT_ROUTES:
     logging.info(f"Loaded {len(TRANSPORT_ROUTES)} transport rules.")
 
 API_PASSWORD = os.environ.get("API_PASSWORD")
+if not API_PASSWORD:
+    API_PASSWORD = secrets.token_hex(16)
+    logging.warning(f"No API_PASSWORD set. Generated random password: {API_PASSWORD}")
 PORT = int(os.environ.get("PORT", 7860))
 
 # --- Recording/DVR Configuration ---
@@ -329,15 +334,13 @@ FLARESOLVERR_TIMEOUT = int(os.environ.get("FLARESOLVERR_TIMEOUT", 30))
 
 
 def check_password(request):
-    """Verifica la password API se impostata."""
-    if not API_PASSWORD:
-        return True
-
+    """Verifica la password API."""
     api_password_param = request.query.get("api_password")
-    if api_password_param == API_PASSWORD:
+    if api_password_param and hmac.compare_digest(api_password_param, API_PASSWORD):
         return True
 
-    if request.headers.get("x-api-password") == API_PASSWORD:
+    header_password = request.headers.get("x-api-password")
+    if header_password and hmac.compare_digest(header_password, API_PASSWORD):
         return True
 
     return False

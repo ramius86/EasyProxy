@@ -4,6 +4,7 @@ import asyncio
 from typing import Optional, Dict, Any
 from urllib.parse import urlparse
 from config import FLARESOLVERR_URL, FLARESOLVERR_TIMEOUT, get_proxy_for_url, TRANSPORT_ROUTES, GLOBAL_PROXIES, get_connector_for_proxy, get_solver_proxy_url
+from utils.security import is_safe_url
 from aiohttp_socks import ProxyConnector
 import yarl
 
@@ -26,6 +27,10 @@ async def smart_request(
     """
     Effettua una richiesta intelligente: prova la via diretta, poi curl_cffi, e se fallisce usa FlareSolverr.
     """
+    if not await is_safe_url(url):
+        logger.error(f"Blocked unsafe SSRF request to {url}")
+        raise ValueError(f"Unsafe URL requested: {url}")
+        
     current_proxies = proxies or GLOBAL_PROXIES
     proxy = get_proxy_for_url(
         url, TRANSPORT_ROUTES, current_proxies, bypass_warp=bypass_warp
