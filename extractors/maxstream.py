@@ -2,11 +2,9 @@ import logging
 import random
 import re
 import socket
-import io
-from urllib.parse import urlparse, quote_plus
+from urllib.parse import urlparse
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 from aiohttp.resolver import DefaultResolver
-from aiohttp_socks import ProxyConnector
 from bs4 import BeautifulSoup
 from config import GLOBAL_PROXIES, TRANSPORT_ROUTES, get_proxy_for_url, get_connector_for_proxy
 

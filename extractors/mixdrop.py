@@ -3,12 +3,10 @@ import logging
 import re
 import time
 import base64
-import os
 from urllib.parse import urlparse, urljoin, urlencode
 
 import aiohttp
-from bs4 import BeautifulSoup, SoupStrainer
-from aiohttp_socks import ProxyConnector
+from bs4 import BeautifulSoup
 
 from config import (
     FLARESOLVERR_URL, 

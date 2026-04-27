@@ -1,6 +1,6 @@
 import logging
 import re
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 from extractors.base import BaseExtractor, ExtractorError
 
 logger = logging.getLogger(__name__)

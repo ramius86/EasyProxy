@@ -1,10 +1,5 @@
-import logging
-import random
 import re
 from urllib.parse import urlparse, urljoin
-from aiohttp import ClientSession, ClientTimeout, TCPConnector
-from aiohttp_socks import ProxyConnector
-from config import get_proxy_for_url, TRANSPORT_ROUTES, get_connector_for_proxy
 from utils.packed import eval_solver
 
 from extractors.base import BaseExtractor, ExtractorError

@@ -1,10 +1,7 @@
 import logging
 import re
-import asyncio
 import urllib.parse
-import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
-from aiohttp_socks import ProxyConnector
 
 from config import FLARESOLVERR_URL, FLARESOLVERR_TIMEOUT, get_proxy_for_url, TRANSPORT_ROUTES, GLOBAL_PROXIES, get_connector_for_proxy
 from utils.smart_request import smart_request

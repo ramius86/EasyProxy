@@ -4,7 +4,6 @@ import logging
 import os
 import random
 import re
-import threading
 import time
 from typing import Any, Dict
 from urllib.parse import parse_qs, parse_qsl, urlencode, urljoin, urlparse, urlunparse

@@ -1,12 +1,9 @@
-import asyncio
 import logging
 import time
 import socket
 import hashlib
 import os
-import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
-from aiohttp_socks import ProxyConnector
 from typing import Optional, Dict, Any
 from urllib.parse import quote_plus
 from config import get_proxy_for_url, TRANSPORT_ROUTES, GLOBAL_PROXIES, get_connector_for_proxy

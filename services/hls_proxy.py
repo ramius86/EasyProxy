@@ -2,20 +2,16 @@ import asyncio
 import logging
 import random
 import re
-import sys
 import os
 import subprocess
 import time
 import socket
 import urllib.parse
 import html
-from urllib.parse import urlparse, urljoin
 import base64
 import binascii
 import hashlib
 import hmac
-import json
-import ssl
 import yarl
 import aiohttp
 from utils.security import is_safe_url, get_base_url
@@ -677,7 +673,7 @@ class HLSProxy:
                 if connector_url.startswith("socks5h://"):
                     connector_url = connector_url.replace("socks5h://", "socks5://")
                     rdns = True
-                    logger.debug(f"🕵️ SOCKS5h detected: forcing remote DNS resolution")
+                    logger.debug("🕵️ SOCKS5h detected: forcing remote DNS resolution")
 
                 # Unlimited connections for maximum speed
                 connector = ProxyConnector.from_url(
@@ -2407,7 +2403,7 @@ class HLSProxy:
             # Caso 'auth' - URL che contengono 'auth' richiedono headers speciali
             if "auth" in key_url.lower():
                 logger.debug(
-                    f"🔐 Detected 'auth' key URL, ensuring special headers are present"
+                    "🔐 Detected 'auth' key URL, ensuring special headers are present"
                 )
                 if "X-User-Agent" not in headers:
                     headers["X-User-Agent"] = headers.get(
@@ -2741,7 +2737,7 @@ class HLSProxy:
                 
                 # ✅ FIX LOG: Determine correct routing for display
                 if session_proxy:
-                    routing = f"WARP (Cloudflare IP)" if (WARP_PROXY_URL and session_proxy == WARP_PROXY_URL) else f"PROXY ({session_proxy})"
+                    routing = "WARP (Cloudflare IP)" if (WARP_PROXY_URL and session_proxy == WARP_PROXY_URL) else f"PROXY ({session_proxy})"
                 else:
                     routing = "BYPASS (Real IP)"
                 
@@ -3802,7 +3798,7 @@ class HLSProxy:
                 self.segment_cache[cache_key] = (decrypted_content, time.time())
                 logger.info(f"📦 Prefetched segment: {url.split('/')[-1]}")
 
-        except Exception as e:
+        except Exception:
             pass
         finally:
             if cache_key in self.prefetch_tasks:
@@ -3962,10 +3958,10 @@ class HLSProxy:
                 pass
 
             if init_content is None and init_url:
-                logger.error(f"❌ Failed to fetch init segment")
+                logger.error("❌ Failed to fetch init segment")
                 return web.Response(status=502)
             if segment_content is None:
-                logger.error(f"❌ Failed to fetch segment")
+                logger.error("❌ Failed to fetch segment")
                 return web.Response(status=502)
 
             init_content = init_content or b""
@@ -3975,7 +3971,7 @@ class HLSProxy:
 
             if skip_decrypt:
                 # Null key: just concatenate init + segment without decryption
-                logger.info(f"🔓 Skip decrypt mode - remuxing without decryption")
+                logger.info("🔓 Skip decrypt mode - remuxing without decryption")
                 combined_content = init_content + segment_content
             else:
                 # Decripta con PyCryptodome

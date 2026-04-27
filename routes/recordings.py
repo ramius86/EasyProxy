@@ -355,7 +355,7 @@ def setup_recording_routes(app, recording_manager):
                         logger.error(f"Failed to start recording after cleanup: {url}")
             # Even if recording failed, still redirect to live stream
             # so user can watch while we figure out what went wrong
-            logger.debug(f"Recording may have failed, but redirecting to live stream anyway")
+            logger.debug("Recording may have failed, but redirecting to live stream anyway")
 
         # Build proxy URL to watch the live stream while recording
         from urllib.parse import urlencode
@@ -408,7 +408,6 @@ def setup_recording_routes(app, recording_manager):
             return web.json_response({"error": "Recording file not available yet"}, status=404)
 
         # Redirect to the stream endpoint (absolute URL for Stremio)
-        from utils.security import get_base_url
         base_url = get_base_url(request)
 
         api_password = request.query.get('api_password', '')
