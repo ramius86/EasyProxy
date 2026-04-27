@@ -45,11 +45,19 @@ class DoodStreamExtractor:
         self.proxy_manager = FreeProxyManager.get_instance(
             "dood",
             [
-                os.environ.get(
-                    "DOOD_FREE_PROXY_URL",
-                    "https://raw.githubusercontent.com/proxifly/free-proxy-list/refs/heads/main/proxies/all/data.txt",
-                ),
-                "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text"
+                "https://raw.githubusercontent.com/proxifly/free-proxy-list/refs/heads/main/proxies/all/data.txt",
+                "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text",
+                "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt",
+                "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks4.txt",
+                "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt",
+                "https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt",
+                "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt",
+                "https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies.txt",
+                "https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt",
+                "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt",
+                "https://raw.githubusercontent.com/mmpx12/proxy-list/master/https.txt",
+                "https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks4.txt",
+                "https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks5.txt"
             ],
             cache_ttl=int(os.environ.get("DOOD_FREE_PROXY_CACHE_TTL", "7200")),
             max_fetch=_FREE_PROXY_MAX_FETCH,
@@ -118,7 +126,10 @@ class DoodStreamExtractor:
         return str(int(time.time()))
 
     def _is_valid_dood_page(self, html: str) -> bool:
-        return bool(html and "pass_md5" in html and "makePlay(" in html and "token=" in html)
+        if not html: return False
+        # Extended markers for newer domains
+        markers = ["pass_md5", "makePlay(", "token=", "get_player(", "vtt", "subtitle"]
+        return any(m in html for m in markers)
 
     def _log_parse_debug(self, html: str) -> None:
         markers = {
@@ -150,12 +161,15 @@ class DoodStreamExtractor:
         def probe_sync(proxy_url: str) -> bool:
             try:
                 scraper = cloudscraper.create_scraper(delay=2)
+                # Ensure we follow redirects (default is True, but explicit is better)
                 resp = scraper.get(
                     embed_url,
                     headers={"User-Agent": _DOOD_UA},
-                    timeout=6,
+                    timeout=12, # Increased timeout for free proxies
                     proxies={"http": proxy_url, "https": proxy_url},
+                    allow_redirects=True
                 )
+                # Some proxies return 301/302 that scraper follows. We check final response.
                 return resp.status_code == 200 and self._is_valid_dood_page(resp.text)
             except Exception:
                 return False

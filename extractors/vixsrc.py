@@ -44,11 +44,19 @@ class VixSrcExtractor:
         self.proxy_manager = FreeProxyManager.get_instance(
             "vixsrc",
             [
-                os.environ.get(
-                    "VIXSRC_FREE_PROXY_URL",
-                    "https://raw.githubusercontent.com/proxifly/free-proxy-list/refs/heads/main/proxies/all/data.txt",
-                ),
-                "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text"
+                "https://raw.githubusercontent.com/proxifly/free-proxy-list/refs/heads/main/proxies/all/data.txt",
+                "https://api.proxyscrape.com/v4/free-proxy-list/get?request=display_proxies&proxy_format=protocolipport&format=text",
+                "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt",
+                "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks4.txt",
+                "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt",
+                "https://raw.githubusercontent.com/hookzof/socks5_list/master/proxy.txt",
+                "https://raw.githubusercontent.com/ShiftyTR/Proxy-List/master/socks5.txt",
+                "https://raw.githubusercontent.com/jetkai/proxy-list/main/online-proxies/txt/proxies.txt",
+                "https://raw.githubusercontent.com/clarketm/proxy-list/master/proxy-list-raw.txt",
+                "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/all.txt",
+                "https://raw.githubusercontent.com/mmpx12/proxy-list/master/https.txt",
+                "https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks4.txt",
+                "https://raw.githubusercontent.com/mmpx12/proxy-list/master/socks5.txt"
             ],
             cache_ttl=int(os.environ.get("VIXSRC_FREE_PROXY_CACHE_TTL", "7200")),
             max_fetch=_FREE_PROXY_MAX_FETCH,
