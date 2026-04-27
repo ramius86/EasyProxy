@@ -6,6 +6,7 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  CACHE_ROOT: /tmp/runner/buildx-cache
 
 jobs:
   build:
@@ -28,7 +29,7 @@ jobs:
       - name: Lowercase image name
         run: echo "IMAGE_NAME_LOWER=${GITHUB_REPOSITORY,,}" >> ${GITHUB_ENV}
 
-      - name: Prepare platform tag slug
+      - name: Prepare platform slug
         run: |
           PLATFORM_SLUG="${{ matrix.platform }}"
           echo "PLATFORM_SLUG=${PLATFORM_SLUG//\//-}" >> ${GITHUB_ENV}
@@ -46,14 +47,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Restore local build cache
-        uses: actions/cache@v4
-        with:
-          path: /tmp/.buildx-cache-${{ env.PLATFORM_SLUG }}
-          key: buildx-${{ env.PLATFORM_SLUG }}-${{ hashFiles('Dockerfile', 'requirements.txt') }}
-          restore-keys: |
-            buildx-${{ env.PLATFORM_SLUG }}-
-
       - name: Build and push by digest
         id: build
         uses: docker/build-push-action@v6
@@ -64,28 +57,29 @@ jobs:
           push: true
           outputs: type=image,name=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }},push-by-digest=true,name-canonical=true
           cache-from: |
-            type=local,src=/tmp/.buildx-cache-${{ env.PLATFORM_SLUG }}
+            type=local,src=${{ env.CACHE_ROOT }}/${{ env.PLATFORM_SLUG }}
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:buildcache-${{ env.PLATFORM_SLUG }}
           cache-to: |
-            type=local,dest=/tmp/.buildx-cache-${{ env.PLATFORM_SLUG }}-new,mode=max
+            type=local,dest=${{ env.CACHE_ROOT }}/${{ env.PLATFORM_SLUG }}-new,mode=max
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:buildcache-${{ env.PLATFORM_SLUG }},mode=max
 
-      - name: Rotate local cache (avoid unbounded growth)
+      - name: Rotate local cache
         run: |
-          rm -rf /tmp/.buildx-cache-${{ env.PLATFORM_SLUG }}
-          mv /tmp/.buildx-cache-${{ env.PLATFORM_SLUG }}-new /tmp/.buildx-cache-${{ env.PLATFORM_SLUG }} || true
+          rm -rf ${{ env.CACHE_ROOT }}/${{ env.PLATFORM_SLUG }}
+          mv ${{ env.CACHE_ROOT }}/${{ env.PLATFORM_SLUG }}-new \
+             ${{ env.CACHE_ROOT }}/${{ env.PLATFORM_SLUG }} || true
 
       - name: Export digest
         run: |
-          mkdir -p /tmp/digests
+          mkdir -p /tmp/runner/digests
           digest="${{ steps.build.outputs.digest }}"
-          touch "/tmp/digests/${digest#sha256:}"
+          touch "/tmp/runner/digests/${digest#sha256:}"
 
       - name: Upload digest artifact
         uses: actions/upload-artifact@v4
         with:
           name: digest-${{ env.PLATFORM_SLUG }}
-          path: /tmp/digests/*
+          path: /tmp/runner/digests/*
           if-no-files-found: error
           retention-days: 1
 
@@ -104,7 +98,7 @@ jobs:
       - name: Download all digests
         uses: actions/download-artifact@v4
         with:
-          path: /tmp/digests
+          path: /tmp/runner/digests
           pattern: digest-*
           merge-multiple: true
 
@@ -119,7 +113,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create and push multi-arch manifest
-        working-directory: /tmp/digests
+        working-directory: /tmp/runner/digests
         run: |
           docker buildx imagetools create \
             --tag ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}:latest \
