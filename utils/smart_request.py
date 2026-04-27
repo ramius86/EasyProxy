@@ -1,11 +1,9 @@
 import aiohttp
 import logging
-import asyncio
 from typing import Optional, Dict, Any
 from urllib.parse import urlparse
 from config import FLARESOLVERR_URL, FLARESOLVERR_TIMEOUT, get_proxy_for_url, TRANSPORT_ROUTES, GLOBAL_PROXIES, get_connector_for_proxy, get_solver_proxy_url
 from utils.security import is_safe_url
-from aiohttp_socks import ProxyConnector
 import yarl
 
 logger = logging.getLogger(__name__)

@@ -197,7 +197,7 @@ async def eval_solver(session, url: str, headers: dict, patterns: list[str]) -> 
         
         # If we got here, we found packed JS but couldn't extract the URL
         logger.warning("Found packed JavaScript but no patterns matched at %s. Patterns tried: %s", url, patterns)
-        raise UnpackingError(f"Found packed JavaScript but could not extract video URL. The extraction patterns may need updating.")
+        raise UnpackingError("Found packed JavaScript but could not extract video URL. The extraction patterns may need updating.")
         
     except (UnpackingError, AioProxyError, PyProxyError, asyncio.TimeoutError):
         raise

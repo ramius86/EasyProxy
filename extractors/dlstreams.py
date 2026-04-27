@@ -11,7 +11,6 @@ from playwright.async_api import TimeoutError as PlaywrightTimeoutError, async_p
 from yarl import URL
 
 from config import (
-    GLOBAL_PROXIES,
     TRANSPORT_ROUTES,
     get_proxy_for_url,
     get_connector_for_proxy,
@@ -174,7 +173,8 @@ class DLStreamsExtractor:
                 logger.info("🔗 [Shared Browser] Connected to existing instance on port 9222")
             except Exception:
                 # No browser on 9222, launch a new Master instance
-                import os, sys
+                import os
+                import sys
                 chrome_path = os.getenv("CHROME_BIN") or os.getenv("CHROME_EXE_PATH")
                 is_headless = sys.platform.startswith("linux")
                 executable_path = chrome_path if chrome_path and os.path.exists(chrome_path) else None

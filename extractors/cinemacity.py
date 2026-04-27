@@ -5,11 +5,10 @@ import logging
 import random
 import re
 import urllib.parse
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
-from aiohttp_socks import ProxyConnector
 from config import FLARESOLVERR_URL, FLARESOLVERR_TIMEOUT, get_proxy_for_url, TRANSPORT_ROUTES, GLOBAL_PROXIES, get_connector_for_proxy, get_solver_proxy_url
 from utils.smart_request import smart_request
 

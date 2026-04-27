@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import re
-import json
 from urllib.parse import urlparse, urljoin
 from typing import Dict, Any
 import gzip
@@ -10,7 +9,6 @@ import random
 import aiohttp
 from aiohttp import ClientSession, ClientTimeout, TCPConnector
 import zstandard  # Importa la libreria zstandard
-from aiohttp_socks import ProxyConnector
 from config import get_proxy_for_url, TRANSPORT_ROUTES, GLOBAL_PROXIES, get_connector_for_proxy
 
 from utils.smart_request import smart_request

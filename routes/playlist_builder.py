@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import json
-import base64
 import urllib.parse
 from aiohttp import ClientSession, ClientTimeout
 from typing import Iterator, List, Dict
